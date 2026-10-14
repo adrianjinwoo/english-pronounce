@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>미국식 발음 & IPA 검색기 (Pro)</title>
+  <title>미국식 발음 & IPA 검색기</title>
   <style>
     :root {
       --bg: #ffffff;
@@ -26,7 +26,7 @@
         --chip-bg: #2d2d2d;
       }
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 16px; }
     .widget-container { width: 100%; max-width: 440px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); }
     .title { font-size: 14px; font-weight: 600; color: var(--text-sub); margin-bottom: 12px; }
@@ -38,12 +38,11 @@
     .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
     .chip { font-size: 12px; background: var(--chip-bg); color: var(--text-sub); padding: 4px 10px; border-radius: 12px; cursor: pointer; user-select: none; }
     .chip:hover { color: var(--text); }
-    .result-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
-    .word-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; display: flex; justify-content: center; align-items: center; gap: 6px; }
-    .base-badge { font-size: 11px; background: var(--accent); color: white; padding: 2px 6px; border-radius: 4px; font-weight: normal; vertical-align: middle; }
-    .ipa-display { font-size: 18px; color: var(--accent); font-family: "Courier New", Courier, monospace; margin-bottom: 16px; letter-spacing: 0.5px; }
+    .result-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 18px; text-align: center; }
+    .word-title { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+    .ipa-display { font-size: 19px; color: var(--accent); font-family: "Courier New", Courier, monospace; margin-bottom: 16px; letter-spacing: 0.5px; font-weight: 600; }
     .actions { display: flex; gap: 8px; justify-content: center; }
-    .action-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+    .action-btn { display: flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
     .action-btn:hover { background: var(--chip-bg); }
     .status-msg { font-size: 12px; color: var(--text-sub); margin-top: 10px; min-height: 16px; }
   </style>
@@ -51,23 +50,23 @@
 <body>
 
 <div class="widget-container">
-  <div class="title">🇺🇸 스마트 영어 발음 검색기</div>
+  <div class="title">🇺🇸 미국식 발음 & IPA 검색기</div>
 
   <div class="input-row">
-    <input type="text" id="wordInput" placeholder="단어 입력 (예: rockets, studied)" value="rockets" />
+    <input type="text" id="wordInput" placeholder="단어 입력 (예: apple, rockets)" value="apple" />
     <button class="search-btn" id="searchBtn">검색</button>
   </div>
 
   <div class="chips">
+    <span class="chip" onclick="quickSearch('apple')">apple</span>
     <span class="chip" onclick="quickSearch('rockets')">rockets</span>
-    <span class="chip" onclick="quickSearch('studied')">studied</span>
-    <span class="chip" onclick="quickSearch('running')">running</span>
     <span class="chip" onclick="quickSearch('schedule')">schedule</span>
+    <span class="chip" onclick="quickSearch('comfortable')">comfortable</span>
   </div>
 
   <div class="result-box">
-    <div class="word-title" id="displayWord">rockets</div>
-    <div class="ipa-display" id="displayIpa">/ˈrɑː.kɪt/</div>
+    <div class="word-title" id="displayWord">apple</div>
+    <div class="ipa-display" id="displayIpa">/ˈæp.əl/</div>
     <div class="actions">
       <button class="action-btn" id="listenBtn">🔊 미국식 발음 듣기</button>
       <button class="action-btn" id="copyBtn">📋 기호 복사</button>
@@ -77,8 +76,8 @@
 </div>
 
 <script>
-  let originalSearchWord = 'rockets';
-  let currentIpa = '';
+  let currentTargetWord = 'apple';
+  let currentIpa = '/ˈæp.əl/';
   let currentAudioUrl = null;
 
   const wordInput = document.getElementById('wordInput');
@@ -89,95 +88,75 @@
   const copyBtn = document.getElementById('copyBtn');
   const statusMsg = document.getElementById('statusMsg');
 
-  // 단어 원형 추출 알고리즘 (복수형, 과거형, 진행형)
-  function getBaseWords(w) {
-    let bases = [];
-    if (w.length <= 3) return bases;
-    if (w.endsWith('ies')) bases.push(w.slice(0, -3) + 'y');
-    if (w.endsWith('es')) { bases.push(w.slice(0, -2)); bases.push(w.slice(0, -1)); }
-    if (w.endsWith('s') && !w.endsWith('ss')) bases.push(w.slice(0, -1));
-    if (w.endsWith('ing')) { bases.push(w.slice(0, -3)); bases.push(w.slice(0, -3) + 'e'); }
-    if (w.endsWith('ed')) { bases.push(w.slice(0, -2)); bases.push(w.slice(0, -1)); }
-    return bases;
-  }
-
-  async function fetchAPI(word) {
+  // Datamuse API (IPA 전용 백업망: 복수형, 파생형 등 모든 단어 지원)
+  async function fetchDatamuseIpa(word) {
     try {
-      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
-      if (res.ok) return await res.json();
-    } catch (e) { return null; }
+      const res = await fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(word)}&md=r&ipa=1&max=1`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0 && data[0].tags) {
+          const tag = data[0].tags.find(t => t.startsWith('ipa_pron:'));
+          if (tag) return '/' + tag.replace('ipa_pron:', '') + '/';
+        }
+      }
+    } catch (e) {}
     return null;
   }
 
+  // 메인 검색 함수
   async function searchWord(query) {
     const word = query.trim().toLowerCase();
     if (!word) return;
 
     statusMsg.innerText = '검색 중...';
-    originalSearchWord = word;
-    
-    // 1차 시도: 입력한 단어 그대로 검색
-    let data = await fetchAPI(word);
-    let isBaseWordUsed = false;
-    let foundWord = word;
+    currentTargetWord = word;
+    currentAudioUrl = null;
+    let foundIpa = '';
 
-    // 2차 시도: 못 찾았을 경우 원형으로 변환하여 재검색 (예: rockets -> rocket)
-    if (!data) {
-      const bases = getBaseWords(word);
-      for (let base of bases) {
-        data = await fetchAPI(base);
-        if (data) {
-          isBaseWordUsed = true;
-          foundWord = base;
-          break;
+    try {
+      // 1. dictionaryapi.dev 조회
+      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+      if (res.ok) {
+        const data = await res.json();
+        const entry = data[0];
+
+        // [버그 수정 1] 발음 기호 추출: 최상단 phonetic 확인 후 phonetics 배열 전수 검사
+        if (entry.phonetic && entry.phonetic.trim()) {
+          foundIpa = entry.phonetic.trim();
+        } else if (entry.phonetics && entry.phonetics.length > 0) {
+          const itemWithText = entry.phonetics.find(p => p.text && p.text.trim());
+          if (itemWithText) foundIpa = itemWithText.text.trim();
         }
-      }
-    }
 
-    if (data) {
-      const entry = data[0];
-      let foundIpa = entry.phonetic || '';
-      currentAudioUrl = null;
-
-      // 미국식 오디오 우선 추출
-      if (entry.phonetics && entry.phonetics.length > 0) {
-        const usPhonetic = entry.phonetics.find(p => p.audio && p.audio.includes('-us'));
-        if (usPhonetic) {
-          currentAudioUrl = usPhonetic.audio;
-          if (usPhonetic.text) foundIpa = usPhonetic.text;
-        } else {
-          const fallback = entry.phonetics.find(p => p.text || p.audio);
-          if (fallback) {
-            if (fallback.text) foundIpa = fallback.text;
-            if (fallback.audio) currentAudioUrl = fallback.audio;
+        // [버그 수정 2] 오디오 추출: 텍스트 유무와 상관없이 미국식(-us) 오디오 우선 탐색
+        if (entry.phonetics && entry.phonetics.length > 0) {
+          const usAudio = entry.phonetics.find(p => p.audio && p.audio.includes('-us'));
+          if (usAudio && usAudio.audio) {
+            currentAudioUrl = usAudio.audio;
+          } else {
+            const anyAudio = entry.phonetics.find(p => p.audio && p.audio.trim());
+            if (anyAudio && anyAudio.audio) currentAudioUrl = anyAudio.audio;
           }
         }
       }
+    } catch (e) {}
 
-      currentIpa = foundIpa || '발음 기호 없음';
-      
-      // UI 업데이트
-      if (isBaseWordUsed) {
-        displayWord.innerHTML = `${word} <span class="base-badge">원형: ${foundWord}</span>`;
-        statusMsg.innerText = `사전에 등재된 원형('${foundWord}') 기준으로 검색되었습니다.`;
-      } else {
-        displayWord.innerHTML = word;
-        statusMsg.innerText = '';
+    // 2. 만약 기호를 못 찾았거나 복수형 등으로 404가 났다면 Datamuse 백업망 가동
+    if (!foundIpa) {
+      const backupIpa = await fetchDatamuseIpa(word);
+      if (backupIpa) {
+        foundIpa = backupIpa;
       }
-      displayIpa.innerText = currentIpa;
-
-    } else {
-      // 모든 시도 실패 시
-      currentIpa = '기호 미지원 (음성 재생 가능)';
-      currentAudioUrl = null;
-      displayWord.innerHTML = word;
-      displayIpa.innerText = currentIpa;
-      statusMsg.innerText = '사전 API에 없는 단어는 고품질 브라우저 TTS로 자동 재생됩니다.';
     }
+
+    // 3. 최종 결과 렌더링
+    currentIpa = foundIpa || '기호 미지원';
+    displayWord.innerText = word;
+    displayIpa.innerText = currentIpa;
+    statusMsg.innerText = '';
   }
 
   function playSound() {
-    // 오디오 파일이 있으면 원형 오디오 재생, 없으면 원본 단어(복수형 등)를 TTS로 재생
     if (currentAudioUrl) {
       const audio = new Audio(currentAudioUrl);
       audio.play().catch(() => playSpeechFallback());
@@ -189,8 +168,7 @@
   function playSpeechFallback() {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      // TTS는 항상 사용자가 입력한 원래 단어(rockets 등)를 읽도록 설정
-      const utter = new SpeechSynthesisUtterance(originalSearchWord);
+      const utter = new SpeechSynthesisUtterance(currentTargetWord);
       utter.lang = 'en-US';
       utter.rate = 0.9;
       window.speechSynthesis.speak(utter);
@@ -200,13 +178,13 @@
   }
 
   function copyIpa() {
-    if (!currentIpa || currentIpa.includes('없음') || currentIpa.includes('미지원')) {
+    if (!currentIpa || currentIpa.includes('미지원')) {
       statusMsg.innerText = '복사할 발음 기호가 없습니다.';
       return;
     }
     navigator.clipboard.writeText(currentIpa).then(() => {
       statusMsg.innerText = '✅ 클립보드에 복사되었습니다!';
-      setTimeout(() => { if(statusMsg.innerText.includes('복사')) statusMsg.innerText = ''; }, 2000);
+      setTimeout(() => { if (statusMsg.innerText.includes('복사')) statusMsg.innerText = ''; }, 2000);
     });
   }
 
@@ -222,8 +200,8 @@
   listenBtn.addEventListener('click', playSound);
   copyBtn.addEventListener('click', copyIpa);
 
-  // 초기 단어 로드
-  searchWord('rockets');
+  // 초기 단어 실행
+  searchWord('apple');
 </script>
 
 </body>
